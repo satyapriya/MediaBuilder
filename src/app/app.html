@@ -1,0 +1,134 @@
+<!-- Name Input Modal -->
+<div class="modal-overlay" *ngIf="showNameInput">
+  <div class="modal-content name-modal">
+    <h3>Welcome! Enter your name to start</h3>
+    <input 
+      type="text" 
+      [(ngModel)]="userName" 
+      placeholder="Your name"
+      (keyup.enter)="setUserName(userName)"
+      class="name-input"
+    >
+<!-- [disabled]="!userName.trim()" -->
+  </div>
+</div>
+
+<!-- Loading Spinner -->
+<div class="loading-overlay" *ngIf="isLoading">
+  <div class="spinner"></div>
+  <p>Uploading...</p>
+</div>
+
+<!-- <h1>Angular 21 Media Builder</h1> -->
+
+<div class="container" *ngIf="!showNameInput">
+  <!-- Left Panel: 80% Media Gallery -->
+  <div class="left-panel">
+    <h2>Media Gallery - {{ userName }}</h2>
+    <div class="gallery">
+      <div 
+        class="thumbnail" 
+*ngFor="let item of mediaItems; let i = index; trackBy: trackById"
+
+        (click)="handleGalleryClick(item)"
+        [class.video-thumb]="item.type === 'youtube'"
+        [class.pdf-thumb]="item.type === 'pdf'"
+      >
+        <ng-container *ngIf="item.type !== 'pdf'">
+          <img [src]="item.thumbnailUrl || item.url" [alt]="item.title || item.type">
+        </ng-container>
+        <div *ngIf="item.type === 'pdf'" class="pdf-placeholder">
+          📄 {{ item.title }}
+        </div>
+        <p>{{ item.title || (item.type | titlecase) }}</p>
+        <button class="delete-btn" (click)="deleteItem(item.id); $event.stopPropagation()">❌</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: 20% Drag-Drop + Create -->
+  <div class="right-panel">
+    <div 
+      class="drop-zone" 
+      [class.drag-over]="dragOver"
+      (drop)="handleDrop($event)"
+      (dragover)="allowDrop($event)"
+      (dragenter)="onDragEnter($event)"
+      (dragleave)="onDragLeave($event)"
+    >
+      <p>Drag Images, PDFs, or YouTube URL here</p>
+    </div>
+
+    <button class="create-btn" (click)="createPainting()">
+      🎨 Create Painting
+    </button>
+  </div>
+</div>
+
+<!-- Image Popup Modal -->
+<div class="modal-overlay" *ngIf="showImagePopup" key="image-modal">
+  <div class="modal-content image-modal">
+    <button class="modal-close" (click)="closeImagePopup()">✕</button>
+    <img [src]="currentModalItem?.url" [alt]="currentModalItem?.title" loading="lazy">
+  </div>
+</div>
+
+<!-- PDF Viewer Modal -->
+<div class="modal-overlay" *ngIf="showPdfViewer" key="pdf-modal">
+  <div class="modal-content pdf-modal">
+    <button class="modal-close" (click)="closePdfViewer()">✕</button>
+      <iframe [src]="currentModalItem?.safeUrl || safeUrl(currentModalItem?.url)" width="100%" height="100%"></iframe>
+
+  </div>
+</div>
+
+<!-- Video Popup Modal -->
+<div class="modal-overlay" *ngIf="showVideoPopup" key="video-modal">
+  <div class="modal-content video-modal">
+    <button class="modal-close" (click)="closeVideoPopup()">✕</button>
+    <iframe 
+      [src]="currentModalItem?.safeUrl || safeUrl(currentModalItem?.url)" 
+      width="100%" 
+      height="500"
+      frameborder="0"
+      allowfullscreen
+      loading="lazy"
+    ></iframe>
+  </div>
+</div>
+
+<!-- Paint Popup -->
+<div class="paint-container" *ngIf="showPaintPopup">
+  <div class="paint-toolbar">
+    <button class="toolbar-btn" (click)="setTool('draw')" [class.active]="currentTool === 'draw'">🖌️ Brush</button>
+    <button class="toolbar-btn" (click)="setTool('erase')" [class.active]="currentTool === 'erase'">🧽 Erase</button>
+    <button class="toolbar-btn" (click)="setTool('text')" [class.active]="currentTool === 'text'">📝 Text</button>
+    <button class="toolbar-btn" (click)="setTool('rect')" [class.active]="currentTool === 'rect'">⬜ Rect</button>
+    <button class="toolbar-btn" (click)="setTool('circle')" [class.active]="currentTool === 'circle'">○ Circle</button>
+    <button class="toolbar-btn" (click)="setTool('line')" [class.active]="currentTool === 'line'">➖ Line</button>
+    <button class="toolbar-btn" (click)="clearCanvas()">🗑️ Clear</button>
+
+    <button class="toolbar-btn" (click)="savePainting()">💾 Save</button>
+
+    <button class="toolbar-btn" (click)="closePainting()">❌ Close</button>
+    <label>Size: <input type="range" class="size-slider" min="1" max="50" [(ngModel)]="brushSize" (input)="updateBrushSize()"></label>
+    <input type="color" class="color-picker" [(ngModel)]="brushColor" (change)="updateBrushColor()">
+  </div>
+  <div class="canvas-wrapper">
+    <canvas 
+      #paintCanvas 
+    class="paint-canvas" 
+    [class.text-tool]="currentTool === 'text'"
+    [class.shape-tool]="isShapeTool()"
+
+      width="1200" 
+      height="800"
+      (mousedown)="startDrawing($event)"
+      (mousemove)="draw($event)"
+      (mouseup)="stopDrawing()"
+      (mouseout)="stopDrawing()"
+    ></canvas>
+    <div #textOverlay class="text-overlay"></div>
+  </div>
+
+</div>
