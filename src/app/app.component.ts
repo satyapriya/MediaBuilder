@@ -120,22 +120,31 @@ this.mediaSubscription = this.dbService.getUserMedia(this.userName).subscribe((d
         uploaded: true
       };
 
-      const firebaseKey = this.dbService.saveMedia(this.userName, mediaData);
-      
-      const newItem: MediaItem = {
-        id: this.idCounter++,
+      // Optimistic update with temp ID (-1), real item will replace it via Firebase listener
+      const optimisticItem: MediaItem = {
+        id: -1,
         type,
         url: cloudinaryUrl,
         thumbnailUrl,
-        title,
-        cloudinaryUrl,
-        firebaseKey: firebaseKey || null,
-        uploaded: true
+        title: `${title} (uploading...)`,
+        cloudinaryUrl
       };
-      this.mediaItems.push(newItem);
+      this.mediaItems.unshift(optimisticItem); // Add to beginning for instant feedback
       this.cdr.detectChanges();
+
+      const firebaseKey = this.dbService.saveMedia(this.userName, mediaData);
+      
+      // Remove optimistic item after save (Firebase listener will add real one)
+      setTimeout(() => {
+        this.mediaItems = this.mediaItems.filter(item => item.id !== -1);
+        this.cdr.detectChanges();
+      }, 500); // Brief delay to show feedback
+
     } catch (error) {
       console.error('Upload failed', error);
+      // Remove failed optimistic item
+      this.mediaItems = this.mediaItems.filter(item => item.id !== -1);
+      this.cdr.detectChanges();
     } finally {
       this.isLoading = false;
     }
@@ -194,6 +203,17 @@ this.mediaSubscription = this.dbService.getUserMedia(this.userName).subscribe((d
     const embedUrl = `https://www.youtube.com/embed/${videoId}`;
     const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/0.jpg`;
     
+    // Optimistic update
+    const optimisticItem: MediaItem = {
+      id: -2,
+      type: 'youtube' as const,
+      url: embedUrl,
+      thumbnailUrl,
+      title: 'YouTube Video (adding...)'
+    };
+    this.mediaItems.unshift(optimisticItem);
+    this.cdr.detectChanges();
+
     const mediaData = {
       type: 'youtube',
       url: embedUrl,
@@ -203,15 +223,11 @@ this.mediaSubscription = this.dbService.getUserMedia(this.userName).subscribe((d
 
     const firebaseKey = this.dbService.saveMedia(this.userName, mediaData);
 
-    this.mediaItems.push({
-      id: this.idCounter++,
-      type: 'youtube',
-      url: embedUrl,
-      thumbnailUrl,
-      title: 'YouTube Video',
-      firebaseKey: firebaseKey || null
-    });
-    this.cdr.detectChanges();
+    // Remove optimistic after brief show
+    setTimeout(() => {
+      this.mediaItems = this.mediaItems.filter(item => item.id !== -2);
+      this.cdr.detectChanges();
+    }, 800);
   }
 
   deleteItem(id: number) {
